@@ -1,0 +1,76 @@
+{% set is_home = page and page.meta and page.meta.home %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% if is_home %}sreg — Stratified Randomized Experiments{% elif page and page.title %}{{ page.title }} · sreg{% else %}Page not found · sreg{% endif %}</title>
+  <meta name="description" content="{% if page and page.meta and page.meta.description %}{{ page.meta.description }}{% else %}{{ config.site_description }}{% endif %}">
+  {% if page and page.canonical_url %}<link rel="canonical" href="{{ page.canonical_url }}">{% endif %}
+  <link rel="icon" href="{{ 'assets/favicon.svg' | url }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ 'assets/site.css' | url }}">
+  <script src="{{ 'assets/site.js' | url }}" defer></script>
+</head>
+<body class="{% if is_home %}home{% else %}documentation{% endif %}">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner wrap">
+      <a class="wordmark" href="{{ '.' | url }}" aria-label="sreg home">sreg</a>
+      <span class="header-caption">Stratified Randomized Experiments</span>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="{{ 'get-started/' | url }}" {% if page and page.content and not is_home and not page.meta.empirical %}aria-current="page"{% endif %}>User guide</a>
+        <a href="{{ 'empirical-example/' | url }}" {% if page and page.meta and page.meta.empirical %}aria-current="page"{% endif %}>Application</a>
+        <a href="{{ '.' | url }}#designs">Designs</a>
+        <a href="{{ '.' | url }}#methods">Methods</a>
+        <a class="nav-repositories" href="{{ '.' | url }}#packages">Packages <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+  {% if is_home %}
+    <main id="main">{{ page.content }}</main>
+  {% elif not page or not page.content %}
+    <main id="main" class="wrap prose" style="padding:80px 0"><p class="eyebrow">404</p><h1>Page not found</h1><p>Return to the <a href="{{ '.' | url }}">project home</a> or <a href="{{ 'get-started/' | url }}">consult the user guide</a>.</p></main>
+  {% else %}
+    <div class="docs-shell wrap">
+      <aside class="docs-sidebar" aria-label="Guide navigation">
+        <a class="back-link" href="{{ '.' | url }}">← Project home</a>
+        <p class="eyebrow">Documentation</p>
+        <a class="{% if page.meta.empirical or page.meta.r_reference %}page-link{% else %}sidebar-current{% endif %}" href="{{ 'get-started/' | url }}">User guide</a>
+        <a class="{% if page.meta.r_reference %}sidebar-current{% else %}page-link{% endif %}" href="{{ 'r-guide/' | url }}">R guide and reference</a>
+        <a class="{% if page.meta.empirical %}sidebar-current{% else %}page-link{% endif %}" href="{{ 'empirical-example/' | url }}">Empirical application</a>
+        <nav aria-label="On this page">
+        {% if page.meta.r_reference %}
+          <a href="#install">Installation and help</a>
+          <a href="#data">Preparing data</a>
+          <a href="#arguments">Estimator arguments</a>
+          <a href="#designs">Worked design specifications</a>
+          <a href="#results">Output and inference</a>
+          <a href="#plotting">Plotting</a>
+          <a href="#simulation">Simulation reference</a>
+          <a href="#resources">Further documentation</a>
+        {% elif page.meta.empirical %}
+          <a href="#setting">01 &nbsp; Experimental setting</a>
+          <a href="#load">02 &nbsp; Data preparation</a>
+          <a href="#unadjusted">03 &nbsp; Unadjusted ATEs</a>
+          <a href="#adjusted">04 &nbsp; Covariate adjustment</a>
+          <a href="#report">05 &nbsp; Report results</a>
+          <a href="#sources">Sources and replication</a>
+        {% else %}
+          <a href="#install">01 &nbsp; Install sreg</a>
+          <a href="#data">02 &nbsp; Simulate data</a>
+          <a href="#estimate">03 &nbsp; Estimate the effect</a>
+          <a href="#interpret">04 &nbsp; Interpret results</a>
+          <a href="#next">05 &nbsp; Empirical specification</a>
+        {% endif %}
+        </nav>
+        <div class="sidebar-note">Average treatment effects<br><span>Stratified randomization<br>Asymptotic inference</span></div>
+      </aside>
+      <main id="main" class="guide-content prose">{{ page.content }}</main>
+    </div>
+  {% endif %}
+  <footer class="site-footer">
+    <div class="wrap footer-main"><a class="wordmark" href="{{ '.' | url }}">sreg</a><p>Estimation and inference in stratified randomized experiments.</p><a href="{{ '.' | url }}#packages">Source code ↗</a></div>
+    <div class="wrap footer-bottom"><span>Juri Trifonov · Yuehao Bai · Azeem Shaikh · Max Tabord-Meehan</span><span>Open source · MIT license</span></div>
+  </footer>
+</body>
+</html>

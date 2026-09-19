@@ -1,0 +1,24 @@
+[project]
+site_name = "sreg"
+site_url = "https://jutrifonov.github.io/sreg-project/"
+site_description = "Estimation and inference for stratified randomized experiments. Implementations in R, Stata, and Python."
+site_dir = "docs"
+docs_dir = "source"
+nav = [{"Home" = "index.md"}, {"User guide" = "get-started.md"}, {"R guide and reference" = "r-guide.md"}, {"Empirical application" = "empirical-example.md"}]
+extra_css = ["assets/site.css"]
+extra_javascript = ["assets/site.js"]
+
+[project.theme]
+variant = "modern"
+custom_dir = "overrides"
+font = false
+features = ["content.code.copy", "navigation.footer"]
+favicon = "assets/favicon.svg"
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.pymdownx.highlight]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true

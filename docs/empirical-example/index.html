@@ -1,0 +1,342 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Empirical application · sreg</title>
+  <meta name="description" content="A reproducible sreg application to the Peru iron-supplementation encouragement experiment, with R, Stata, and Python code.">
+  <link rel="canonical" href="https://jutrifonov.github.io/sreg-project/empirical-example/">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body class="documentation">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner wrap">
+      <a class="wordmark" href="./.." aria-label="sreg home">sreg</a>
+      <span class="header-caption">Stratified Randomized Experiments</span>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="../get-started/" >User guide</a>
+        <a href="././" aria-current="page">Application</a>
+        <a href="./..#designs">Designs</a>
+        <a href="./..#methods">Methods</a>
+        <a class="nav-repositories" href="./..#packages">Packages <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+  
+    <div class="docs-shell wrap">
+      <aside class="docs-sidebar" aria-label="Guide navigation">
+        <a class="back-link" href="./..">← Project home</a>
+        <p class="eyebrow">Documentation</p>
+        <a class="page-link" href="../get-started/">User guide</a>
+        <a class="page-link" href="../r-guide/">R guide and reference</a>
+        <a class="sidebar-current" href="././">Empirical application</a>
+        <nav aria-label="On this page">
+        
+          <a href="#setting">01 &nbsp; Experimental setting</a>
+          <a href="#load">02 &nbsp; Data preparation</a>
+          <a href="#unadjusted">03 &nbsp; Unadjusted ATEs</a>
+          <a href="#adjusted">04 &nbsp; Covariate adjustment</a>
+          <a href="#report">05 &nbsp; Report results</a>
+          <a href="#sources">Sources and replication</a>
+        
+        </nav>
+        <div class="sidebar-note">Average treatment effects<br><span>Stratified randomization<br>Asymptotic inference</span></div>
+      </aside>
+      <main id="main" class="guide-content prose"><p class="eyebrow">Empirical application</p>
+
+<h1 id="encouragement-iron-supplementation-and-school-performance">Encouragement, iron supplementation, and school performance</h1>
+<p class="lead">This application uses the AEJapp replication data included with sreg to estimate the effects of two encouragement treatments on school performance. It illustrates data preparation, stratified estimation, covariate adjustment, and reporting.</p>
+
+<div class="guide-language"><span>Implementation</span><div class="language-tabs" role="group" aria-label="Empirical example language"><button type="button" data-select-lang="r" aria-pressed="true">R</button><button type="button" data-select-lang="stata" aria-pressed="false">Stata</button><button type="button" data-select-lang="python" aria-pressed="false">Python</button></div></div>
+
+<h2 id="setting">01 · Experimental setting</h2>
+<p><a href="https://doi.org/10.1257/app.20140494">Chong, Cohen, Field, Nakasone, and Torero (2016)</a> study an intervention encouraging iron supplementation among students in rural Peru. The two active treatments are videos featuring a soccer player or a physician; the placebo video concerns oral hygiene. Assignment was stratified by year in school. The package's analysis dataset contains <strong>215 students in five strata</strong>.</p>
+<p>The outcome, <code>gradesq34</code>, measures school performance in the final two academic quarters. The estimands are the average effects of <strong>assignment to each encouragement video</strong>, relative to placebo. They are not the causal effects of consuming iron supplements. This application also appears in <a href="https://doi.org/10.3982/QE1150">Bugni, Canay, and Shaikh (2019)</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gradesq34</code></td>
+<td>Sum of average grades in the final two quarters</td>
+</tr>
+<tr>
+<td><code>treatment</code></td>
+<td>Original assignment: 1 = soccer player, 2 = physician, 3 = placebo</td>
+</tr>
+<tr>
+<td><code>class_level</code></td>
+<td>School-year stratum</td>
+</tr>
+<tr>
+<td><code>age_months</code></td>
+<td>Student age in months</td>
+</tr>
+<tr>
+<td><code>pills_taken</code></td>
+<td>Realized supplement uptake; not a baseline covariate</td>
+</tr>
+</tbody>
+</table>
+<h2 id="load">02 · Load and prepare the data</h2>
+<p>Install the selected implementation using the <a href="../get-started/#install">installation guide</a>. Recode placebo from <code>3</code> to <code>0</code>, as required by sreg, while retaining the original assignment variable.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="nf">library</span><span class="p">(</span><span class="n">sreg</span><span class="p">)</span>
+<span class="nf">data</span><span class="p">(</span><span class="s">"AEJapp"</span><span class="p">,</span><span class="w"> </span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"sreg"</span><span class="p">)</span>
+
+<span class="c1"># Strip imported Stata labels without changing numeric codes.</span>
+<span class="n">Y</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="nf">unclass</span><span class="p">(</span><span class="n">AEJapp</span><span class="o">$</span><span class="n">gradesq34</span><span class="p">))</span>
+<span class="n">D_original</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="nf">unclass</span><span class="p">(</span><span class="n">AEJapp</span><span class="o">$</span><span class="n">treatment</span><span class="p">))</span>
+<span class="n">D</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">ifelse</span><span class="p">(</span><span class="n">D_original</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">D_original</span><span class="p">)</span>
+<span class="n">S</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="nf">unclass</span><span class="p">(</span><span class="n">AEJapp</span><span class="o">$</span><span class="n">class_level</span><span class="p">))</span>
+<span class="n">age</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="nf">unclass</span><span class="p">(</span><span class="n">AEJapp</span><span class="o">$</span><span class="n">age_months</span><span class="p">))</span>
+
+<span class="nf">table</span><span class="p">(</span><span class="n">D</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<p>Replace the path with the extracted repository location. Save any current dataset before using <code>clear</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">use</span> <span class="s">"/path/to/sreg-stata/data/sreg_aejapp.dta"</span>,<span class="k"> clear</span>
+<span class="k">generate</span> byte D = <span class="nf">cond</span>(treatment <span class="o">==</span> <span class="m">3</span>, <span class="m">0</span>, treatment)
+<span class="k">tabulate</span> D class_level
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sreg</span><span class="w"> </span><span class="kn">import</span> <span class="n">AEJapp</span><span class="p">,</span> <span class="n">sreg</span>
+
+<span class="n">aej</span> <span class="o">=</span> <span class="n">AEJapp</span><span class="p">()</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">aej</span><span class="p">[</span><span class="s2">"gradesq34"</span><span class="p">]</span>
+<span class="n">D</span> <span class="o">=</span> <span class="n">aej</span><span class="p">[</span><span class="s2">"treatment"</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">S</span> <span class="o">=</span> <span class="n">aej</span><span class="p">[</span><span class="s2">"class_level"</span><span class="p">]</span>
+<span class="n">X_age</span> <span class="o">=</span> <span class="n">aej</span><span class="p">[[</span><span class="s2">"age_months"</span><span class="p">]]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">aej</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"D"</span><span class="p">,</span> <span class="s2">"class_level"</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+</code></pre></div>
+</div>
+<p>The treatment–stratum counts are:</p>
+<table>
+<thead>
+<tr>
+<th>Assignment</th>
+<th style="text-align: right;">Year 1</th>
+<th style="text-align: right;">Year 2</th>
+<th style="text-align: right;">Year 3</th>
+<th style="text-align: right;">Year 4</th>
+<th style="text-align: right;">Year 5</th>
+<th style="text-align: right;">Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Placebo (<code>0</code>)</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">72</td>
+</tr>
+<tr>
+<td>Soccer player (<code>1</code>)</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">70</td>
+</tr>
+<tr>
+<td>Physician (<code>2</code>)</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">73</td>
+</tr>
+<tr>
+<td>Total</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">215</td>
+</tr>
+</tbody>
+</table>
+<h2 id="unadjusted">03 · Estimate the unadjusted ATEs</h2>
+<p>Use individual-level assignment and the large-strata procedure. Without covariates, the point estimator aggregates treatment–control contrasts within strata using sample stratum shares. The standard errors use the stratified-design variance estimator, with HC1 enabled by default.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="n">fit_unadjusted</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">D</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<div class="highlight"><pre><span></span><code>sreg gradesq34, treatment(D) strata(class_level)
+<span class="k">estimates</span> store unadjusted
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="n">fit_unadjusted</span> <span class="o">=</span> <span class="n">sreg</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">Y</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">,</span> <span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Encouragement versus placebo</th>
+<th style="text-align: right;">Estimate</th>
+<th style="text-align: right;">Standard error</th>
+<th style="text-align: right;">p-value</th>
+<th>95% confidence interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Soccer player</td>
+<td style="text-align: right;">−0.05113</td>
+<td style="text-align: right;">0.20645</td>
+<td style="text-align: right;">0.80440</td>
+<td>[−0.45577, 0.35351]</td>
+</tr>
+<tr>
+<td>Physician</td>
+<td style="text-align: right;">0.40903</td>
+<td style="text-align: right;">0.20651</td>
+<td style="text-align: right;">0.04763</td>
+<td>[0.00427, 0.81379]</td>
+</tr>
+</tbody>
+</table>
+<p>The physician-encouragement estimate is approximately 0.41 grade units. Its marginal 95% interval narrowly excludes zero; the soccer-player interval includes zero. These are separate asymptotic tests, without adjustment for multiple testing. The empirical results alone cannot establish the coverage properties of an inference procedure.</p>
+<figure class="empirical-figure"><img src="../../assets/peru-effects.svg" alt="Unadjusted ATEs on grades: soccer-player encouragement −0.051 with a 95 percent interval from −0.456 to 0.354; physician encouragement 0.409 with an interval from 0.004 to 0.814."><figcaption>Unadjusted estimates and marginal 95% asymptotic confidence intervals, computed with R sreg 2.1.0.</figcaption></figure>
+
+<h2 id="adjusted">04 · Covariate adjusted inference</h2>
+<p>As a baseline-adjusted illustration, include age in months. The randomization strata remain <code>class_level</code>; adding an adjustment covariate does not change the original stratification design.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="n">fit_age</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">D</span><span class="p">,</span>
+<span class="w">                </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">data.frame</span><span class="p">(</span><span class="n">age_months</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">age</span><span class="p">))</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">fit_age</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<div class="highlight"><pre><span></span><code>sreg gradesq34 age_months, treatment(D) strata(class_level)
+<span class="k">estimates</span> store age_adjusted
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="n">fit_age</span> <span class="o">=</span> <span class="n">sreg</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">Y</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">,</span> <span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X_age</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit_age</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Encouragement versus placebo</th>
+<th style="text-align: right;">Estimate</th>
+<th style="text-align: right;">Standard error</th>
+<th>95% confidence interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Soccer player</td>
+<td style="text-align: right;">−0.03420</td>
+<td style="text-align: right;">0.19160</td>
+<td>[−0.40972, 0.34133]</td>
+</tr>
+<tr>
+<td>Physician</td>
+<td style="text-align: right;">0.34380</td>
+<td style="text-align: right;">0.19575</td>
+<td>[−0.03986, 0.72747]</td>
+</tr>
+</tbody>
+</table>
+<p>Both standard errors are smaller in this sample, and both intervals include zero. Adjustment choices should follow the analysis specification, rather than the statistical significance of a realized estimate.</p>
+<details>
+<summary>Reproduce the repository's two-covariate specification</summary>
+<p>The repository examples include both <code>pills_taken</code> and <code>age_months</code>. The following code reproduces that specification. Because pills taken measures uptake after treatment assignment, this is a software-replication exercise; it should not be interpreted as baseline adjustment identifying the total effect of encouragement.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="n">X_repository</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">data.frame</span><span class="p">(</span>
+<span class="w">  </span><span class="n">pills_taken</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="nf">unclass</span><span class="p">(</span><span class="n">AEJapp</span><span class="o">$</span><span class="n">pills_taken</span><span class="p">)),</span>
+<span class="w">  </span><span class="n">age_months</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">age</span>
+<span class="p">)</span>
+<span class="n">fit_repository</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">D</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">X_repository</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">fit_repository</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<div class="highlight"><pre><span></span><code>sreg gradesq34 pills_taken age_months, treatment(D) strata(class_level)
+<span class="k">estimates</span> store repository_specification
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="n">fit_repository</span> <span class="o">=</span> <span class="n">sreg</span><span class="p">(</span>
+    <span class="n">Y</span><span class="o">=</span><span class="n">Y</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">,</span> <span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">,</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">aej</span><span class="p">[[</span><span class="s2">"pills_taken"</span><span class="p">,</span> <span class="s2">"age_months"</span><span class="p">]],</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit_repository</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<p>The repository specification gives estimates −0.02862 and 0.34609, with standard errors 0.18162 and 0.18572, respectively.</p>
+</details>
+<h2 id="report">05 · Extract and plot results</h2>
+<p>The following commands report the unadjusted specification. Use the corresponding stored result to report the age-adjusted specification.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="nf">data.frame</span><span class="p">(</span>
+<span class="w">  </span><span class="n">estimate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit_unadjusted</span><span class="o">$</span><span class="n">tau.hat</span><span class="p">,</span>
+<span class="w">  </span><span class="n">se</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit_unadjusted</span><span class="o">$</span><span class="n">se.rob</span><span class="p">,</span>
+<span class="w">  </span><span class="n">lower</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit_unadjusted</span><span class="o">$</span><span class="n">CI.left</span><span class="p">,</span>
+<span class="w">  </span><span class="n">upper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit_unadjusted</span><span class="o">$</span><span class="n">CI.right</span>
+<span class="p">)</span>
+<span class="nf">plot</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">,</span>
+<span class="w">     </span><span class="n">treatment_labels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">"Soccer-player encouragement"</span><span class="p">,</span>
+<span class="w">                          </span><span class="s">"Physician encouragement"</span><span class="p">),</span>
+<span class="w">     </span><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span>
+<span class="w">     </span><span class="n">x_axis_title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Effect on grades relative to placebo"</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="k">estimates table</span> unadjusted age_adjusted, b(<span class="nx">%9.5f</span>)<span class="k"> se</span>(<span class="nx">%9.5f</span>) stats(N)
+<span class="k">estimates restore</span> unadjusted
+<span class="k">matrix list e</span>(b)
+<span class="k">matrix list e</span>(V)
+sregplot, treatmentlabels(<span class="s">"Soccer player"</span> <span class="s">"Physician"</span>)
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">[</span><span class="s2">"tau_hat"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">[</span><span class="s2">"se_rob"</span><span class="p">])</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fit_unadjusted</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">treatment_labels</span><span class="o">=</span><span class="p">[</span><span class="s2">"Soccer-player encouragement"</span><span class="p">,</span> <span class="s2">"Physician encouragement"</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Encouragement effects on school grades"</span><span class="p">,</span>
+    <span class="n">x_axis_title</span><span class="o">=</span><span class="s2">"Effect on grades relative to placebo"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">"peru-effects.png"</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<h2 id="sources">Sources and replication</h2>
+<p>The data and core examples come from the <a href="https://github.com/jutrifonov/sreg">R repository</a>, <a href="https://github.com/jutrifonov/sreg-stata">Stata repository</a>, and <a href="https://github.com/jutrifonov/sreg-python/blob/main/docs/getting-started.md">Python practical guide</a>. Numerical tables and the figure on this page were computed using R sreg 2.1.0. The age-only adjustment is an additional illustration; the two-covariate repository specification is reproduced separately above.</p>
+<ul>
+<li>Chong, A., Cohen, I., Field, E., Nakasone, E., and Torero, M. (2016). <a href="https://doi.org/10.1257/app.20140494">Iron Deficiency and Schooling Attainment in Peru</a>. <em>American Economic Journal: Applied Economics</em>, 8(4), 222–255.</li>
+<li>Bugni, F. A., Canay, I. A., and Shaikh, A. M. (2019). <a href="https://doi.org/10.3982/QE1150">Inference under Covariate-Adaptive Randomization with Multiple Treatments</a>. <em>Quantitative Economics</em>, 10(4), 1747–1785.</li>
+</ul>
+<p>See the <a href="../#designs">design map</a> for other assignment structures and the <a href="../get-started/">user guide</a> for simulated examples and argument conventions.</p></main>
+    </div>
+  
+  <footer class="site-footer">
+    <div class="wrap footer-main"><a class="wordmark" href="./..">sreg</a><p>Estimation and inference in stratified randomized experiments.</p><a href="./..#packages">Source code ↗</a></div>
+    <div class="wrap footer-bottom"><span>Juri Trifonov · Yuehao Bai · Azeem Shaikh · Max Tabord-Meehan</span><span>Open source · MIT license</span></div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,513 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>R guide and reference · sreg</title>
+  <meta name="description" content="Complete R documentation for sreg — data preparation, estimator arguments, supported designs, inference, reporting, plotting, and simulation.">
+  <link rel="canonical" href="https://jutrifonov.github.io/sreg-project/r-guide/">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body class="documentation">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner wrap">
+      <a class="wordmark" href="./.." aria-label="sreg home">sreg</a>
+      <span class="header-caption">Stratified Randomized Experiments</span>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="../get-started/" aria-current="page">User guide</a>
+        <a href="../empirical-example/" >Application</a>
+        <a href="./..#designs">Designs</a>
+        <a href="./..#methods">Methods</a>
+        <a class="nav-repositories" href="./..#packages">Packages <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+  
+    <div class="docs-shell wrap">
+      <aside class="docs-sidebar" aria-label="Guide navigation">
+        <a class="back-link" href="./..">← Project home</a>
+        <p class="eyebrow">Documentation</p>
+        <a class="page-link" href="../get-started/">User guide</a>
+        <a class="sidebar-current" href="././">R guide and reference</a>
+        <a class="page-link" href="../empirical-example/">Empirical application</a>
+        <nav aria-label="On this page">
+        
+          <a href="#install">Installation and help</a>
+          <a href="#data">Preparing data</a>
+          <a href="#arguments">Estimator arguments</a>
+          <a href="#designs">Worked design specifications</a>
+          <a href="#results">Output and inference</a>
+          <a href="#plotting">Plotting</a>
+          <a href="#simulation">Simulation reference</a>
+          <a href="#resources">Further documentation</a>
+        
+        </nav>
+        <div class="sidebar-note">Average treatment effects<br><span>Stratified randomization<br>Asymptotic inference</span></div>
+      </aside>
+      <main id="main" class="guide-content prose"><p class="eyebrow">R documentation</p>
+
+<h1 id="r-guide-and-reference">R guide and reference</h1>
+<p class="lead">A detailed guide to specifying the experimental design, estimating treatment effects, conducting inference, and reporting results with sreg in R.</p>
+
+<p>Start with the <a href="../get-started/?lang=r">introductory walkthrough</a> for a first analysis. This guide covers the functionality documented in the <a href="https://github.com/jutrifonov/sreg">R README</a>, organized around an empirical workflow. The <a href="../empirical-example/?lang=r">Peru application</a> provides a complete example using experimental data.</p>
+<h2 id="install">Installation and help</h2>
+<div class="highlight"><pre><span></span><code><span class="nf">install.packages</span><span class="p">(</span><span class="s">"sreg"</span><span class="p">)</span>
+<span class="nf">library</span><span class="p">(</span><span class="n">sreg</span><span class="p">)</span>
+</code></pre></div>
+<p>For the development version:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">install.packages</span><span class="p">(</span><span class="s">"remotes"</span><span class="p">)</span>
+<span class="n">remotes</span><span class="o">::</span><span class="nf">install_github</span><span class="p">(</span><span class="s">"jutrifonov/sreg"</span><span class="p">)</span>
+</code></pre></div>
+<p>CRAN installs required dependencies automatically. The README lists <code>dplyr</code>, <code>tidyr</code>, <code>extraDistr</code>, and <code>rlang</code> as dependencies; optional tools include <code>haven</code>, <code>knitr</code>, <code>rmarkdown</code>, and <code>testthat</code>. You do not need to load these packages to call <code>sreg()</code> directly. Record the version used in an analysis and consult its installed help:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">packageVersion</span><span class="p">(</span><span class="s">"sreg"</span><span class="p">)</span>
+<span class="nf">help</span><span class="p">(</span><span class="n">sreg</span><span class="p">)</span>
+<span class="nf">help</span><span class="p">(</span><span class="n">sreg.rgen</span><span class="p">)</span>
+<span class="nf">help</span><span class="p">(</span><span class="s">"plot.sreg"</span><span class="p">)</span>
+<span class="nf">citation</span><span class="p">(</span><span class="s">"sreg"</span><span class="p">)</span>
+<span class="nf">sessionInfo</span><span class="p">()</span>
+</code></pre></div>
+<p>The examples below follow the 2.1.0 README. The <a href="https://github.com/jutrifonov/sreg/blob/main/NEWS.md">release history</a> records changes between versions.</p>
+<h2 id="data">Preparing experimental data</h2>
+<p>Supply one row per observed individual. <code>Y</code>, <code>D</code>, <code>S</code>, and the rows of <code>X</code> must refer to the same observations in the same order. Code the control group as <code>0</code> and active treatments as <code>1, 2, …</code>. Each treatment effect is measured relative to control.</p>
+<p>For individual assignment, omit <code>G.id</code>. For cluster assignment, repeat the cluster identifier on every individual record belonging to that cluster. Treatment and stratum membership are shared within a cluster. <code>Ng</code> records the size of the cluster represented by those observations; repeat that value across its records.</p>
+<table>
+<thead>
+<tr>
+<th>Outcome <code>Y</code></th>
+<th>Stratum <code>S</code></th>
+<th>Treatment <code>D</code></th>
+<th>Cluster <code>G.id</code></th>
+<th>Size <code>Ng</code></th>
+<th>Baseline covariate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8.2</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>10</td>
+<td>12</td>
+</tr>
+<tr>
+<td>9.1</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>10</td>
+<td>12</td>
+</tr>
+<tr>
+<td>10.4</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>30</td>
+<td>14</td>
+</tr>
+<tr>
+<td>11.0</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>30</td>
+<td>14</td>
+</tr>
+</tbody>
+</table>
+<p>These illustrative rows show the organization of cluster data, not a complete estimation sample. If <code>Ng</code> is omitted, sreg uses the number of observed records in each cluster. When only a subset of a cluster is observed, distinguish that observed count from the represented cluster size.</p>
+<p>Inspect treatment allocation before estimation:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># dat is your analysis dataset</span>
+<span class="nf">head</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+<span class="nf">table</span><span class="p">(</span><span class="n">stratum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">treatment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">D</span><span class="p">)</span>
+</code></pre></div>
+<p>For cluster assignment, inspect allocation at the level of clusters:</p>
+<div class="highlight"><pre><span></span><code><span class="n">assignment</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">unique</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="nf">c</span><span class="p">(</span><span class="s">"G.id"</span><span class="p">,</span><span class="w"> </span><span class="s">"S"</span><span class="p">,</span><span class="w"> </span><span class="s">"D"</span><span class="p">)])</span>
+<span class="nf">table</span><span class="p">(</span><span class="n">stratum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assignment</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">treatment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assignment</span><span class="o">$</span><span class="n">D</span><span class="p">)</span>
+</code></pre></div>
+<p>Use baseline covariates for adjustment. In cluster experiments, sreg aggregates individual-varying covariates to cluster means. It does not use within-cluster individual variation directly in the adjustment regression.</p>
+<h2 id="arguments">Estimator arguments</h2>
+<div class="highlight"><pre><span></span><code><span class="nf">sreg</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="p">,</span><span class="w"> </span><span class="n">G.id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">Ng</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span>
+<span class="w">     </span><span class="n">HC1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Meaning and default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Y</code></td>
+<td>Numeric observed outcomes, supplied as a vector or a single-column matrix, data frame, or tibble.</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>Numeric randomization-stratum indicators. <code>NULL</code> specifies no stratification.</td>
+</tr>
+<tr>
+<td><code>D</code></td>
+<td>Numeric treatment indicators; <code>0</code> is control and positive consecutive integers identify active treatments.</td>
+</tr>
+<tr>
+<td><code>G.id</code></td>
+<td>Numeric cluster identifiers. <code>NULL</code> specifies individual-level treatment assignment.</td>
+</tr>
+<tr>
+<td><code>Ng</code></td>
+<td>Represented cluster sizes. With <code>NULL</code>, sizes are calculated from available observations in each cluster.</td>
+</tr>
+<tr>
+<td><code>X</code></td>
+<td>Covariate matrix, data frame, or tibble, with one row per observation. <code>NULL</code> selects the unadjusted estimator.</td>
+</tr>
+<tr>
+<td><code>HC1</code></td>
+<td>Apply the finite-sample variance correction (<code>TRUE</code> by default).</td>
+</tr>
+<tr>
+<td><code>small.strata</code></td>
+<td>Select small-strata or mixed-design estimation and inference (<code>FALSE</code> by default).</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>Number of assignment units per small stratum. For cluster assignment, count clusters. Omit for a uniform small-strata design; supply for mixed designs with 4-tuples or larger.</td>
+</tr>
+</tbody>
+</table>
+<p>Stratum, treatment, cluster, and cluster-size inputs may also be supplied in the numeric vector or single-column formats accepted for outcomes. <code>X</code> can contain multiple columns.</p>
+<p>sreg applies point and variance estimators corresponding to these design inputs. Including covariates selects the covariate-adjusted counterpart. Setting <code>small.strata = TRUE</code> changes the estimation procedure; it is not a generic correction for a small total sample.</p>
+<h2 id="designs">Worked design specifications</h2>
+<p>The following examples generate complete datasets so that each specification can be run independently after <code>library(sreg)</code>. In an empirical analysis, replace the generated inputs with the corresponding variables in your data.</p>
+<h3 id="large-strata">Large strata and multiple treatments</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">large_data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1000</span><span class="p">,</span><span class="w"> </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">-0.3</span><span class="p">,</span><span class="w"> </span><span class="m">0.2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">n.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span>
+<span class="p">)</span>
+<span class="n">large_fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">large_data</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">large_data</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">large_data</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">large_data</span><span class="p">[</span><span class="nf">c</span><span class="p">(</span><span class="s">"x_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"x_2"</span><span class="p">)]</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">large_fit</span><span class="p">)</span>
+</code></pre></div>
+<p>With R sreg 2.1.0 and the seed above, the estimates are:</p>
+<table>
+<thead>
+<tr>
+<th>Contrast</th>
+<th>Estimate</th>
+<th>Standard error</th>
+<th>95% confidence interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Treatment 1 − control</td>
+<td>−0.29036</td>
+<td>0.07901</td>
+<td>[−0.44523, −0.13550]</td>
+</tr>
+<tr>
+<td>Treatment 2 − control</td>
+<td>0.18691</td>
+<td>0.08047</td>
+<td>[0.02920, 0.34463]</td>
+</tr>
+</tbody>
+</table>
+<p>There are two active treatments and a control group. sreg reports treatment 1 versus control and treatment 2 versus control. Omit <code>X</code> to obtain unadjusted estimates; omit <code>S</code> only when the experiment was not stratified.</p>
+<h3 id="pairs">Matched pairs</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">pair_data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">100</span><span class="p">,</span><span class="w"> </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.2</span><span class="p">,</span><span class="w"> </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span>
+<span class="w">  </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="n">treat.sizes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">pair_fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pair_data</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pair_data</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pair_data</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">2</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">pair_fit</span><span class="p">)</span>
+</code></pre></div>
+<p>Each pair contains one control and one treated individual. Here <code>k = 2</code> in the estimator validates the common pair size; the estimator can also infer it when <code>k</code> is omitted.</p>
+<h3 id="small-strata">Matched triplets and general k-tuples</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">triplet_data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">300</span><span class="p">,</span><span class="w"> </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">1.2</span><span class="p">,</span><span class="w"> </span><span class="m">0.8</span><span class="p">),</span><span class="w"> </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span>
+<span class="w">  </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="n">treat.sizes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">triplet_fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">triplet_data</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">triplet_data</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">triplet_data</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">triplet_data</span><span class="p">[</span><span class="nf">c</span><span class="p">(</span><span class="s">"x_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"x_2"</span><span class="p">)],</span>
+<span class="w">  </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">triplet_fit</span><span class="p">)</span>
+</code></pre></div>
+<p>The 300 observations form 100 triplets, with one individual assigned to each of control, treatment 1, and treatment 2. For other uniform k-tuple designs, specify the corresponding group size and allocation. In the generator, the entries of <code>treat.sizes</code> count control first, then active treatments, and must sum to <code>k</code>.</p>
+<h3 id="mixed-strata">Mixed small and large strata</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">mixed_data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">120</span><span class="p">,</span><span class="w"> </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.5</span><span class="p">,</span><span class="w"> </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span>
+<span class="w">  </span><span class="n">mixed.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">n.small</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">80</span><span class="p">,</span>
+<span class="w">  </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="n">treat.sizes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="m">2</span><span class="p">),</span><span class="w"> </span><span class="n">n.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span>
+<span class="p">)</span>
+<span class="n">mixed_fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mixed_data</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mixed_data</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mixed_data</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">mixed_fit</span><span class="p">)</span>
+</code></pre></div>
+<p>Here 80 observations form 20 small strata of size four. The remaining 40 observations form four large strata. Note the different arguments: <strong><code>mixed.strata</code> generates data; <code>small.strata</code> selects the estimation procedure.</strong></p>
+<p>With varying stratum sizes, an explicit <code>k</code> identifies the intended small component. Automatic detection with <code>k = NULL</code> covers conventional pairs and triplets; specify <code>k</code> for mixed 4-tuples and larger. At least 25% of all strata must have the selected small size. This threshold concerns the number of strata, not the number of observations. The mixed estimator combines the small- and large-strata components using observation-count weights.</p>
+<h3 id="clusters">Cluster-level assignment</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">cluster_data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">300</span><span class="p">,</span><span class="w"> </span><span class="n">Nmax</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">50</span><span class="p">,</span><span class="w"> </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">1.2</span><span class="p">,</span><span class="w"> </span><span class="m">0.8</span><span class="p">),</span>
+<span class="w">  </span><span class="n">n.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span>
+<span class="p">)</span>
+<span class="n">cluster_fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">G.id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="o">$</span><span class="n">G.id</span><span class="p">,</span><span class="w"> </span><span class="n">Ng</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="o">$</span><span class="n">Ng</span><span class="p">,</span>
+<span class="w">  </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cluster_data</span><span class="p">[</span><span class="nf">c</span><span class="p">(</span><span class="s">"x_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"x_2"</span><span class="p">)]</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">cluster_fit</span><span class="p">)</span>
+</code></pre></div>
+<p>Here <code>n = 300</code> in the generator means <strong>300 clusters</strong>, rather than 300 individuals. The returned data have one row per observed individual. Supply both the cluster identifiers and represented sizes to the estimator.</p>
+<p>For matched or mixed cluster designs, combine <code>G.id</code> and <code>Ng</code> with <code>small.strata = TRUE</code>. Then <code>k</code> counts clusters per small stratum, and <code>n.small</code> in the generator counts clusters assigned to the small component. See the <a href="../#designs">design map</a> for the combinations of assignment level and stratum structure.</p>
+<h2 id="results">Output, inference, and reporting</h2>
+<p><code>print(fit)</code> invokes the S3 method <code>print.sreg(x, ...)</code>. Its table reports ATE estimates, standard errors, test statistics, p-values, 95% asymptotic confidence intervals, and significance indicators. It also reports the number of observations, treatments and strata, the assignment level, the strata procedure, the HC1 setting, and adjustment covariates. Cluster counts and small-stratum size are shown when applicable.</p>
+<p>The returned object is a list of class <code>sreg</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tau.hat</code></td>
+<td>One estimated ATE per active treatment, relative to control.</td>
+</tr>
+<tr>
+<td><code>se.rob</code></td>
+<td>Corresponding estimated standard errors.</td>
+</tr>
+<tr>
+<td><code>t.stat</code></td>
+<td>Estimate divided by its standard error.</td>
+</tr>
+<tr>
+<td><code>p.value</code></td>
+<td>Two-sided asymptotic p-values for zero treatment effects.</td>
+</tr>
+<tr>
+<td><code>CI.left</code>, <code>CI.right</code></td>
+<td>Lower and upper endpoints of the 95% asymptotic intervals.</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>Input data organized by the function, including outcomes and design variables.</td>
+</tr>
+<tr>
+<td><code>lin.adj</code></td>
+<td>Data frame of covariates used for linear adjustment.</td>
+</tr>
+<tr>
+<td><code>small.strata</code></td>
+<td>Whether the small-strata option was selected.</td>
+</tr>
+<tr>
+<td><code>HC1</code></td>
+<td>Whether the finite-sample variance correction was applied.</td>
+</tr>
+</tbody>
+</table>
+<p>Extract a table for further analysis or export:</p>
+<div class="highlight"><pre><span></span><code><span class="n">results</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">data.frame</span><span class="p">(</span>
+<span class="w">  </span><span class="n">treatment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">seq_along</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">tau.hat</span><span class="p">),</span>
+<span class="w">  </span><span class="n">estimate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">tau.hat</span><span class="p">),</span>
+<span class="w">  </span><span class="n">standard_error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">se.rob</span><span class="p">),</span>
+<span class="w">  </span><span class="n">statistic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">t.stat</span><span class="p">),</span>
+<span class="w">  </span><span class="n">p_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">p.value</span><span class="p">),</span>
+<span class="w">  </span><span class="n">lower</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">CI.left</span><span class="p">),</span>
+<span class="w">  </span><span class="n">upper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.vector</span><span class="p">(</span><span class="n">large_fit</span><span class="o">$</span><span class="n">CI.right</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="nf">write.csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span><span class="w"> </span><span class="s">"sreg-results.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">row.names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span>
+</code></pre></div>
+<p>An estimate is expressed in the units of the outcome. The intervals use the asymptotic normal approximation; the reported test statistic does not imply a finite-sample Student t reference distribution. With multiple treatments, these are marginal intervals for each contrast with control. They do not provide simultaneous coverage for all effects.</p>
+<p><code>HC1 = FALSE</code> disables the finite-sample variance correction. It does not change the choice of experimental design. The <a href="../get-started/#interpret">introductory example</a> and <a href="../empirical-example/#report">empirical application</a> show numerical results and their interpretation.</p>
+<h2 id="plotting">Plotting and customization</h2>
+<p><code>plot(fit)</code> dispatches to <code>plot.sreg()</code>. It displays treatment-effect estimates and their confidence intervals and invisibly returns the underlying ggplot object.</p>
+<div class="highlight"><pre><span></span><code><span class="n">p</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span>
+<span class="w">  </span><span class="n">large_fit</span><span class="p">,</span>
+<span class="w">  </span><span class="n">treatment_labels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">"Treatment 1"</span><span class="p">,</span><span class="w"> </span><span class="s">"Treatment 2"</span><span class="p">),</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Treatment effects relative to control"</span><span class="p">,</span>
+<span class="w">  </span><span class="n">bar_fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"#2463a6"</span><span class="p">,</span>
+<span class="w">  </span><span class="n">point_shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">23</span><span class="p">,</span>
+<span class="w">  </span><span class="n">point_fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"white"</span><span class="p">,</span>
+<span class="w">  </span><span class="n">x_axis_title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Average treatment effect"</span><span class="p">,</span>
+<span class="w">  </span><span class="n">zero_line</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span>
+<span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Purpose and default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>x</code></td>
+<td>The fitted <code>sreg</code> object.</td>
+</tr>
+<tr>
+<td><code>treatment_labels</code></td>
+<td>Labels in treatment order; defaults to “Treatment 1”, “Treatment 2”, etc.</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>Plot title; defaults to “Estimated ATEs with Confidence Intervals”.</td>
+</tr>
+<tr>
+<td><code>bar_fill</code></td>
+<td>Interval colors: default viridis scale (<code>NULL</code>), a single color, or two gradient colors.</td>
+</tr>
+<tr>
+<td><code>point_shape</code>, <code>point_size</code></td>
+<td>Point symbol (<code>23</code>, a diamond) and size (<code>3</code>).</td>
+</tr>
+<tr>
+<td><code>point_fill</code>, <code>point_color</code></td>
+<td>Point fill (<code>"white"</code>) and outline (<code>"black"</code>).</td>
+</tr>
+<tr>
+<td><code>point_stroke</code></td>
+<td>Point-outline thickness (<code>1.2</code>).</td>
+</tr>
+<tr>
+<td><code>label_color</code>, <code>label_size</code></td>
+<td>Estimate and standard-error label color (<code>"black"</code>) and size (<code>4</code>).</td>
+</tr>
+<tr>
+<td><code>bg_color</code></td>
+<td>Panel background; <code>NULL</code> retains the theme default.</td>
+</tr>
+<tr>
+<td><code>grid</code></td>
+<td>Show grid lines (<code>TRUE</code>).</td>
+</tr>
+<tr>
+<td><code>zero_line</code></td>
+<td>Show a dashed reference line at zero (<code>TRUE</code>).</td>
+</tr>
+<tr>
+<td><code>y_axis_title</code>, <code>x_axis_title</code></td>
+<td>Axis titles; each defaults to <code>NULL</code>.</td>
+</tr>
+<tr>
+<td><code>...</code></td>
+<td>Additional arguments; currently unused by this method.</td>
+</tr>
+</tbody>
+</table>
+<p>Because the result is a ggplot object, it can be further formatted or saved with ggplot2:</p>
+<div class="highlight"><pre><span></span><code><span class="n">p</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ggplot2</span><span class="o">::</span><span class="nf">theme</span><span class="p">(</span><span class="n">legend.position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"none"</span><span class="p">)</span>
+<span class="n">ggplot2</span><span class="o">::</span><span class="nf">ggsave</span><span class="p">(</span><span class="s">"sreg-treatment-effects.pdf"</span><span class="p">,</span><span class="w"> </span><span class="n">plot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">,</span>
+<span class="w">                </span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">7</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">)</span>
+</code></pre></div>
+<p>For a plot based on observed experimental data, see the <a href="../empirical-example/#report">Peru results</a>.</p>
+<h2 id="simulation">Simulation reference</h2>
+<p><code>sreg.rgen()</code> generates outcomes, assignments, design identifiers, and covariates for examples and simulation studies. It is not needed to analyze an existing experimental dataset.</p>
+<div class="highlight"><pre><span></span><code><span class="nf">sreg.rgen</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">Nmax</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">50</span><span class="p">,</span><span class="w"> </span><span class="n">n.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="p">,</span>
+<span class="w">          </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">0</span><span class="p">),</span><span class="w"> </span><span class="n">gamma.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">0.4</span><span class="p">,</span><span class="w"> </span><span class="m">0.2</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">),</span>
+<span class="w">          </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">is.cov</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">small.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span>
+<span class="w">          </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="n">treat.sizes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">),</span>
+<span class="w">          </span><span class="n">mixed.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w"> </span><span class="n">n.small</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n</code></td>
+<td>Total individuals if <code>cluster = FALSE</code>; total clusters if <code>cluster = TRUE</code>.</td>
+</tr>
+<tr>
+<td><code>Nmax</code></td>
+<td>Maximum generated cluster size (default <code>50</code>).</td>
+</tr>
+<tr>
+<td><code>n.strata</code></td>
+<td>Number of large strata (default <code>10</code>); in a mixed design, refers to the large component.</td>
+</tr>
+<tr>
+<td><code>tau.vec</code></td>
+<td>Vector of population effects, one for each active treatment; default <code>c(0)</code>.</td>
+</tr>
+<tr>
+<td><code>gamma.vec</code></td>
+<td>Three covariate coefficients; default <code>c(0.4, 0.2, 1)</code>.</td>
+</tr>
+<tr>
+<td><code>cluster</code></td>
+<td>Generate cluster assignment (<code>TRUE</code> by default) or individual assignment.</td>
+</tr>
+<tr>
+<td><code>is.cov</code></td>
+<td>Include covariates (<code>TRUE</code> by default).</td>
+</tr>
+<tr>
+<td><code>small.strata</code></td>
+<td>Generate a uniform small-strata design (<code>FALSE</code> by default).</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>Assignment units per small stratum (default <code>3</code>); counts clusters under cluster assignment.</td>
+</tr>
+<tr>
+<td><code>treat.sizes</code></td>
+<td>Allocation counts in each small stratum, control first (default <code>c(1, 1, 1)</code>). Supply one entry for control and each active treatment, summing to <code>k</code>.</td>
+</tr>
+<tr>
+<td><code>mixed.strata</code></td>
+<td>Generate both small and large strata (<code>FALSE</code> by default).</td>
+</tr>
+<tr>
+<td><code>n.small</code></td>
+<td>Individuals or clusters allocated to the small component; must be divisible by <code>k</code>. With <code>NULL</code>, uses the largest multiple of <code>k</code> not exceeding half of <code>n</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The generated data include <code>Y</code>, <code>S</code>, and <code>D</code>; cluster designs also provide <code>G.id</code> and <code>Ng</code>. When covariates are included, <code>x_1</code> and <code>x_2</code> can be selected as the columns of <code>X</code>. In cluster designs, the number of returned rows is the number of observed individuals, not the value of the cluster-count argument <code>n</code>.</p>
+<p>Set the seed before generation for reproducibility within R. Choose <code>tau.vec</code>, <code>k</code>, and <code>treat.sizes</code> jointly: for example, two active treatments in triplets use <code>tau.vec = c(1.2, 0.8)</code>, <code>k = 3</code>, and <code>treat.sizes = c(1, 1, 1)</code>. The worked examples above cover large strata, pairs, triplets, mixed designs, and clusters.</p>
+<h2 id="resources">Empirical application and further documentation</h2>
+<p>The <a href="../empirical-example/?lang=r">Peru encouragement experiment</a> walks through loading <code>AEJapp</code>, recoding control from <code>3</code> to <code>0</code>, inspecting assignment by stratum, estimating both treatment effects, adding covariates, and reporting results. It includes the README specification alongside a baseline-age adjustment example.</p>
+<ul>
+<li><a href="https://github.com/jutrifonov/sreg">R README and source</a></li>
+<li><a href="https://github.com/jutrifonov/sreg/raw/main/.github/README.pdf">Package manual — PDF</a></li>
+<li><a href="https://github.com/jutrifonov/sreg/raw/main/.github/assets/sreg-estimator-formulas.pdf">Estimator formulas — PDF</a></li>
+<li><a href="../#references">Theoretical foundations and references</a></li>
+<li><a href="../#paper">Companion paper — coming soon</a></li>
+</ul>
+<p>The project authors are Juri Trifonov, Yuehao Bai, Azeem Shaikh, and Max Tabord-Meehan. Use <code>citation("sreg")</code> for the installed software's citation and cite the methodological papers corresponding to the procedure used. The package is distributed under the MIT license.</p></main>
+    </div>
+  
+  <footer class="site-footer">
+    <div class="wrap footer-main"><a class="wordmark" href="./..">sreg</a><p>Estimation and inference in stratified randomized experiments.</p><a href="./..#packages">Source code ↗</a></div>
+    <div class="wrap footer-bottom"><span>Juri Trifonov · Yuehao Bai · Azeem Shaikh · Max Tabord-Meehan</span><span>Open source · MIT license</span></div>
+  </footer>
+</body>
+</html>

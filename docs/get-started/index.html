@@ -1,0 +1,324 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>User guide · sreg</title>
+  <meta name="description" content="Installation, ATE estimation, covariate adjustment, and asymptotic inference using sreg in R, Stata, and Python.">
+  <link rel="canonical" href="https://jutrifonov.github.io/sreg-project/get-started/">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body class="documentation">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner wrap">
+      <a class="wordmark" href="./.." aria-label="sreg home">sreg</a>
+      <span class="header-caption">Stratified Randomized Experiments</span>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="././" aria-current="page">User guide</a>
+        <a href="../empirical-example/" >Application</a>
+        <a href="./..#designs">Designs</a>
+        <a href="./..#methods">Methods</a>
+        <a class="nav-repositories" href="./..#packages">Packages <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+  
+    <div class="docs-shell wrap">
+      <aside class="docs-sidebar" aria-label="Guide navigation">
+        <a class="back-link" href="./..">← Project home</a>
+        <p class="eyebrow">Documentation</p>
+        <a class="sidebar-current" href="././">User guide</a>
+        <a class="page-link" href="../r-guide/">R guide and reference</a>
+        <a class="page-link" href="../empirical-example/">Empirical application</a>
+        <nav aria-label="On this page">
+        
+          <a href="#install">01 &nbsp; Install sreg</a>
+          <a href="#data">02 &nbsp; Simulate data</a>
+          <a href="#estimate">03 &nbsp; Estimate the effect</a>
+          <a href="#interpret">04 &nbsp; Interpret results</a>
+          <a href="#next">05 &nbsp; Empirical specification</a>
+        
+        </nav>
+        <div class="sidebar-note">Average treatment effects<br><span>Stratified randomization<br>Asymptotic inference</span></div>
+      </aside>
+      <main id="main" class="guide-content prose"><p class="eyebrow">User guide</p>
+
+<h1 id="estimation-and-inference">Estimation and inference</h1>
+<p class="lead">This guide illustrates estimation of an average treatment effect under stratified randomization. A simulated example introduces the data structure, linear covariate adjustment, and interpretation of the reported estimates and standard errors.</p>
+
+<div class="guide-language"><span>Implementation</span><div class="language-tabs" role="group" aria-label="Guide language"><button type="button" data-select-lang="r" aria-pressed="true">R</button><button type="button" data-select-lang="stata" aria-pressed="false">Stata</button><button type="button" data-select-lang="python" aria-pressed="false">Python</button></div></div>
+
+<div class="callout"><strong>Detailed R documentation</strong><br>For all estimator arguments, worked design specifications, returned results, plot customization, and simulation options, see the <a href="../../r-guide/">R guide and reference</a>. The <a href="../../empirical-example/?lang=r">empirical application</a> follows a complete analysis of experimental data.</div>
+
+<div class="callout"><strong>Simulation specification</strong><br>1,000 individuals · 4 large strata · 1 active treatment versus control · 2 baseline covariates. The simulated treatment effect is 0.5 outcome units.</div>
+
+<h2 id="install">01 · Installation</h2>
+<div data-lang="r">
+<p>Install the released R package from CRAN, then load it:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">install.packages</span><span class="p">(</span><span class="s">"sreg"</span><span class="p">)</span>
+<span class="nf">library</span><span class="p">(</span><span class="n">sreg</span><span class="p">)</span>
+</code></pre></div>
+<p>For the latest development version, install from the <a href="https://github.com/jutrifonov/sreg">R repository</a>:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">install.packages</span><span class="p">(</span><span class="s">"remotes"</span><span class="p">)</span>
+<span class="n">remotes</span><span class="o">::</span><span class="nf">install_github</span><span class="p">(</span><span class="s">"jutrifonov/sreg"</span><span class="p">)</span>
+</code></pre></div>
+<p>The example below uses the large-strata estimator. Feature availability may differ between the CRAN release and the development version; record the installed version when reporting an empirical analysis.</p>
+</div>
+<div data-lang="stata" hidden="hidden">
+<p>The Stata implementation requires <strong>Stata 14.2 or newer</strong>. Download the <a href="https://github.com/jutrifonov/sreg-stata">Stata repository</a> using <strong>Code → Download ZIP</strong>, and unzip it. Access to the repository is required for this installation route.</p>
+<p>Replace the example path with the absolute path to the extracted folder:</p>
+<div class="highlight"><pre><span></span><code><span class="k">net</span> install sreg, from(<span class="s">"/path/to/sreg-stata"</span>)<span class="k"> replace</span>
+<span class="k">help</span> sreg
+</code></pre></div>
+<p>The package runs natively in Stata and Mata, without an R or Python dependency. These instructions refer to <code>sreg-stata</code>, the native implementation.</p>
+</div>
+<div data-lang="python" hidden="hidden">
+<p>The Python implementation requires <strong>Python 3.9 or newer</strong>. Install the current source from the <a href="https://github.com/jutrifonov/sreg-python">Python repository</a> in your Python environment. This command requires Git and access to the repository:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/jutrifonov/sreg-python.git"</span>
+</code></pre></div>
+<p>Then import the estimator and data generator:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sreg</span><span class="w"> </span><span class="kn">import</span> <span class="n">sreg</span><span class="p">,</span> <span class="n">sreg_rgen</span>
+</code></pre></div>
+<p>The repository describes PyPI installation as a post-release option. Use the repository installation above for this walkthrough.</p>
+</div>
+<h2 id="data">02 · Data and estimand</h2>
+<p>For the individual-randomized example, let Y(1) and Y(0) denote potential outcomes under treatment and control. The estimand is the average treatment effect, <strong>τ = E[Y(1) − Y(0)]</strong>. With multiple active treatments, the package estimates an ATE for each treatment relative to control.</p>
+<p>The simulation has 1,000 individuals in four strata and a treatment effect of 0.5. The generator returns observed outcomes <code>Y</code>, stratum indicators <code>S</code>, assignments <code>D</code>, and covariates <code>x_1</code> and <code>x_2</code>. Treatment is assigned at the individual level within strata.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="nf">set.seed</span><span class="p">(</span><span class="m">42</span><span class="p">)</span>
+<span class="n">dat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg.rgen</span><span class="p">(</span>
+<span class="w">  </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1000</span><span class="p">,</span>
+<span class="w">  </span><span class="n">tau.vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">0.5</span><span class="p">),</span>
+<span class="w">  </span><span class="n">n.strata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">,</span>
+<span class="w">  </span><span class="n">cluster</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span>
+<span class="p">)</span>
+
+<span class="nf">head</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+<span class="nf">table</span><span class="p">(</span><span class="n">dat</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">D</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<p>Save any data you are working on first: the <code>clear</code> option replaces the dataset in memory.</p>
+<div class="highlight"><pre><span></span><code><span class="k">set</span> rng mt64
+<span class="k">set</span> seed <span class="m">42</span>
+sreg_rgen,<span class="k"> n</span>(<span class="m">1000</span>) individual strata(<span class="m">4</span>) tau(.<span class="m">5</span>)<span class="k"> clear</span>
+
+<span class="k">list</span> Y S D x_1 x_2<span class="k"> in</span> <span class="m">1</span><span class="o">/</span><span class="m">6</span>
+<span class="k">tabulate</span> S D
+</code></pre></div>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="n">dat</span> <span class="o">=</span> <span class="n">sreg_rgen</span><span class="p">(</span>
+    <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">tau_vec</span><span class="o">=</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,),</span>
+    <span class="n">n_strata</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">cluster</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"S"</span><span class="p">,</span> <span class="s2">"D"</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+</code></pre></div>
+</div>
+<p>The random seed makes a simulation repeatable within a given implementation and environment. <strong>The same seed does not generate identical data across R, Stata, and Python.</strong> Compare estimates across languages using the same input dataset.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Y</code></td>
+<td>The observed outcome for each individual</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>The stratum used for randomization</td>
+</tr>
+<tr>
+<td><code>D</code></td>
+<td>Treatment assignment: <code>0</code> for control, <code>1</code> for treatment</td>
+</tr>
+<tr>
+<td><code>x_1</code>, <code>x_2</code></td>
+<td>Baseline covariates used for linear adjustment</td>
+</tr>
+</tbody>
+</table>
+<h2 id="estimate">03 · Estimation and covariate adjustment</h2>
+<p>The following specification estimates the ATE with linear adjustment for <code>x_1</code> and <code>x_2</code>. The default uses the large-strata procedure and applies the HC1 finite-sample correction to the variance estimator.</p>
+<p>Covariates should be selected with reference to the experimental design and the intended adjustment specification. The package's adjustment procedure and corresponding variance estimator are described in the <a href="https://github.com/jutrifonov/sreg#references">methodological references</a>.</p>
+<div data-lang="r">
+<div class="highlight"><pre><span></span><code><span class="n">fit</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span>
+<span class="w">  </span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span>
+<span class="w">  </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">S</span><span class="p">,</span>
+<span class="w">  </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">D</span><span class="p">,</span>
+<span class="w">  </span><span class="n">X</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="p">[</span><span class="nf">c</span><span class="p">(</span><span class="s">"x_1"</span><span class="p">,</span><span class="w"> </span><span class="s">"x_2"</span><span class="p">)]</span>
+<span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span>
+</code></pre></div>
+<p>Omit <code>X</code> for estimation without covariate adjustment:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fit_unadjusted</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sreg</span><span class="p">(</span><span class="n">Y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">Y</span><span class="p">,</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">S</span><span class="p">,</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dat</span><span class="o">$</span><span class="n">D</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<div class="highlight"><pre><span></span><code>sreg Y x_1 x_2, treatment(D) strata(S)
+</code></pre></div>
+<p>The command prints the results directly. Omit the covariate names for estimation without covariate adjustment:</p>
+<div class="highlight"><pre><span></span><code>sreg Y, treatment(D) strata(S)
+</code></pre></div>
+<p>Stata replaces the active estimation results each time an estimation command runs. Rerun the adjusted command before inspecting its stored results below.</p>
+</div>
+<div data-lang="python" hidden="hidden">
+<div class="highlight"><pre><span></span><code><span class="n">fit</span> <span class="o">=</span> <span class="n">sreg</span><span class="p">(</span>
+    <span class="n">Y</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"Y"</span><span class="p">],</span>
+    <span class="n">S</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"S"</span><span class="p">],</span>
+    <span class="n">D</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"D"</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">dat</span><span class="p">[[</span><span class="s2">"x_1"</span><span class="p">,</span> <span class="s2">"x_2"</span><span class="p">]],</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span>
+</code></pre></div>
+<p>Omit <code>X</code> for estimation without covariate adjustment:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fit_unadjusted</span> <span class="o">=</span> <span class="n">sreg</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"Y"</span><span class="p">],</span> <span class="n">S</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"S"</span><span class="p">],</span> <span class="n">D</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="s2">"D"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit_unadjusted</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<h2 id="interpret">04 · Interpretation and inference</h2>
+<p>Each row corresponds to an active treatment relative to control. The reported standard error is obtained from the variance estimator for the specified randomization design and adjustment procedure.</p>
+<table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Treatment effect</td>
+<td>Estimated average effect of treatment relative to control, in the units of <code>Y</code></td>
+</tr>
+<tr>
+<td>Standard error</td>
+<td>Estimated sampling uncertainty, accounting for the selected design and adjustment</td>
+</tr>
+<tr>
+<td>95% confidence interval</td>
+<td>The estimate plus or minus approximately 1.96 standard errors, based on the asymptotic normal approximation</td>
+</tr>
+<tr>
+<td>p-value</td>
+<td>Two-sided asymptotic test of the null hypothesis that the corresponding ATE equals zero</td>
+</tr>
+</tbody>
+</table>
+<p>In this simulation, the true ATE is <strong>0.5</strong>. The estimation error varies across simulated samples. The efficiency properties of covariate adjustment concern the relevant asymptotic variance; they do not imply that estimated standard errors decrease in every finite sample.</p>
+<p>Confidence intervals and tests rely on an asymptotic approximation. The HC1 correction does not make inference exact in finite samples. When several treatment effects are reported, the individual 95% intervals are marginal intervals, rather than a simultaneous confidence region.</p>
+<div data-lang="r">
+<p>The returned object provides the estimates, standard errors, and interval endpoints:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fit</span><span class="o">$</span><span class="n">tau.hat</span>
+<span class="n">fit</span><span class="o">$</span><span class="n">se.rob</span>
+<span class="nf">cbind</span><span class="p">(</span><span class="n">lower</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit</span><span class="o">$</span><span class="n">CI.left</span><span class="p">,</span><span class="w"> </span><span class="n">upper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fit</span><span class="o">$</span><span class="n">CI.right</span><span class="p">)</span>
+</code></pre></div>
+<p>For this example, running R sreg 2.1.0 with seed 42 gives:</p>
+<table>
+<thead>
+<tr>
+<th>Estimated effect</th>
+<th>Standard error</th>
+<th>95% confidence interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.48152</td>
+<td>0.06456</td>
+<td>[0.35500, 0.60805]</td>
+</tr>
+</tbody>
+</table>
+<p>The estimated ATE is 0.48152 outcome units, with a standard error of 0.06456. The 95% interval contains the data-generating value of 0.5 and excludes zero.</p>
+</div>
+<div data-lang="stata" hidden="hidden">
+<p>Inspect the adjusted model's stored results and plot its confidence interval:</p>
+<div class="highlight"><pre><span></span><code>sreg Y x_1 x_2, treatment(D) strata(S)
+<span class="k">matrix list e</span>(b)
+<span class="k">matrix list e</span>(V)
+sregplot
+</code></pre></div>
+<p><code>e(b)</code> contains the estimates; <code>e(V)</code> contains their covariance matrix. The treatment coefficient is named <code>tau1</code>.</p>
+</div>
+<div data-lang="python" hidden="hidden">
+<p>Extract the estimates and standard errors, or plot the result:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">fit</span><span class="p">[</span><span class="s2">"tau_hat"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">fit</span><span class="p">[</span><span class="s2">"se_rob"</span><span class="p">])</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</code></pre></div>
+<p>The plot method returns a Matplotlib <code>Axes</code> object for subsequent formatting or export.</p>
+</div>
+<h2 id="next">05 · Specification for empirical applications</h2>
+<p>For an empirical application, supply observed outcomes, treatment assignments, randomization strata, and any covariates used for adjustment. Code control as <code>0</code> and active treatments as consecutive integers <code>1, 2, …</code>. Stratum codes <code>1, 2, …</code> provide a common format across implementations.</p>
+<p>The specification must correspond to the assignment mechanism. Strata partition assignment units before randomization; clusters are groups of individuals assigned jointly to treatment. These identifiers have distinct roles in estimation and variance calculation.</p>
+<h3 id="large-strata">Large strata</h3>
+<p>The example uses the large-strata procedure. For an unstratified experiment, omit the strata argument. The distinction between large and small strata concerns the stratification structure underlying the inference procedure, not the overall sample size alone.</p>
+<h3 id="small-strata">Matched pairs and k-tuples</h3>
+<p>Select the small-strata estimator when the design uses small matched groups. The option is <code>small.strata = TRUE</code> in R, <code>smallstrata</code> in Stata, and <code>small_strata=True</code> in Python. In a uniform design the common group size can be inferred; an explicit <code>k</code> validates it.</p>
+<h3 id="mixed-strata">Mixed small and large strata</h3>
+<p>Use the small-strata option to select mixed inference for varying stratum sizes. Specify <code>k</code> to identify the small component when it consists of 4-tuples or larger. At least 25% of strata must have the selected small-stratum size. See the <a href="https://github.com/jutrifonov/sreg/raw/main/.github/assets/sreg-estimator-formulas.pdf">estimator formulas</a> and your implementation's reference before using this specification.</p>
+<h3 id="cluster-assignment">Cluster assignment</h3>
+<p>Supply cluster identifiers and represented cluster sizes: <code>G.id</code> and <code>Ng</code> in R, <code>cluster()</code> and <code>clustersize()</code> in Stata, or <code>G_id</code> and <code>Ng</code> in Python. For small or mixed strata, <code>k</code> counts <strong>clusters</strong> per small stratum. Individual-varying covariates are aggregated to cluster means for adjustment.</p>
+<div class="callout"><strong>Design-specific variance estimation</strong><br>The example uses individual assignment and large strata. Cluster-randomized and matched-group designs require their corresponding estimator options and variance formulas.</div>
+
+<h2 id="empirical-application">Empirical application</h2>
+<p>The <a href="../empirical-example/">Peru encouragement experiment</a> provides a complete application using the package's AEJapp data: treatment recoding, unadjusted and age-adjusted estimates, confidence intervals, and plotting in R, Stata, and Python.</p>
+<h2 id="reference">Reference documentation</h2>
+<div data-lang="r">
+<ul>
+<li><strong>Complete guide:</strong> <a href="../r-guide/">R guide and reference</a>.</li>
+<li><strong>Function help:</strong> run <code>help(sreg)</code> and <code>help(sreg.rgen)</code> in R.</li>
+<li><strong>Examples and source:</strong> visit the <a href="https://github.com/jutrifonov/sreg">R repository</a>.</li>
+<li><strong>Release information:</strong> visit the <a href="https://cran.r-project.org/package=sreg">CRAN package page</a>.</li>
+</ul>
+</div>
+<div data-lang="stata" hidden="hidden">
+<ul>
+<li><strong>Command help:</strong> run <code>help sreg</code>, <code>help sreg_rgen</code>, and <code>help sregplot</code>.</li>
+<li><strong>Replication examples:</strong> open <a href="https://github.com/jutrifonov/sreg-stata/blob/main/examples/try_sreg.do"><code>examples/try_sreg.do</code></a>.</li>
+<li><strong>Source and installation updates:</strong> visit the <a href="https://github.com/jutrifonov/sreg-stata">Stata repository</a>.</li>
+</ul>
+</div>
+<div data-lang="python" hidden="hidden">
+<ul>
+<li><strong>API documentation:</strong> read the <a href="https://github.com/jutrifonov/sreg-python/blob/main/docs/api.md">Python API reference</a>.</li>
+<li><strong>Additional examples:</strong> read the <a href="https://github.com/jutrifonov/sreg-python/blob/main/docs/getting-started.md">Python practical guide</a>.</li>
+<li><strong>Source and installation updates:</strong> visit the <a href="https://github.com/jutrifonov/sreg-python">Python repository</a>.</li>
+</ul>
+</div>
+<h3 id="citation">Software citation</h3>
+<p>Cite the software version used in the analysis and the methodological papers corresponding to the estimator and randomization design. The project authors are Juri Trifonov, Yuehao Bai, Azeem Shaikh, and Max Tabord-Meehan.</p>
+<div data-lang="r">
+<p>Get the citation for your installed R version:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">citation</span><span class="p">(</span><span class="s">"sreg"</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div data-lang="stata" hidden="hidden">
+<p>Record the Stata package version used in your analysis and consult the authorship and references in the <a href="https://github.com/jutrifonov/sreg-stata#authors">Stata README</a>.</p>
+</div>
+<div data-lang="python" hidden="hidden">
+<p>Use the repository's <a href="https://github.com/jutrifonov/sreg-python/blob/main/CITATION.cff">citation metadata</a> and record the version used in your analysis.</p>
+</div>
+<p class="page-source">Based on the R, Stata, and Python package documentation. Installation routes and advanced features may differ by release.</p></main>
+    </div>
+  
+  <footer class="site-footer">
+    <div class="wrap footer-main"><a class="wordmark" href="./..">sreg</a><p>Estimation and inference in stratified randomized experiments.</p><a href="./..#packages">Source code ↗</a></div>
+    <div class="wrap footer-bottom"><span>Juri Trifonov · Yuehao Bai · Azeem Shaikh · Max Tabord-Meehan</span><span>Open source · MIT license</span></div>
+  </footer>
+</body>
+</html>
