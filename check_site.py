@@ -5,6 +5,7 @@ from urllib.parse import urljoin, urlparse, unquote
 
 ROOT = Path(__file__).parent / 'docs'
 ORIGIN = 'https://example.invalid'
+BASE_PATH = '/sreg-project/'
 
 class Page(HTMLParser):
     def __init__(self, text):
@@ -30,10 +31,11 @@ for path, page in pages.items():
     rel = path.relative_to(ROOT).as_posix()
     route = '/' + rel.removesuffix('index.html') if rel.endswith('index.html') else '/' + rel
     for ref in page.refs:
-        url = urlparse(urljoin(ORIGIN + route, ref))
+        url = urlparse(urljoin(ORIGIN + BASE_PATH.rstrip('/') + route, ref))
         if url.netloc != 'example.invalid' or url.scheme not in ('http', 'https'):
             continue
-        target = ROOT / unquote(url.path).lstrip('/')
+        assert url.path.startswith(BASE_PATH), f'Link escapes project base: {ref}'
+        target = ROOT / unquote(url.path[len(BASE_PATH):])
         if target.is_dir():
             target /= 'index.html'
         assert target.is_file(), f'{path}: missing {ref} → {target}'
