@@ -119,7 +119,7 @@ print(fit_unadjusted)
 
 The physician-encouragement estimate is approximately 0.41 grade units. Its marginal 95% interval narrowly excludes zero; the soccer-player interval includes zero. These are separate asymptotic tests, without adjustment for multiple testing. The empirical results alone cannot establish the coverage properties of an inference procedure.
 
-<figure class="empirical-figure"><img src="../assets/peru-effects.svg" alt="Unadjusted ATEs on grades: soccer-player encouragement −0.051 with a 95 percent interval from −0.456 to 0.354; physician encouragement 0.409 with an interval from 0.004 to 0.814."><figcaption>Unadjusted estimates and marginal 95% asymptotic confidence intervals, computed with R sreg 2.1.0.</figcaption></figure>
+<figure class="empirical-figure"><img src="assets/peru-effects.svg" alt="Unadjusted ATEs on grades: soccer-player encouragement −0.051 with a 95 percent interval from −0.456 to 0.354; physician encouragement 0.409 with an interval from 0.004 to 0.814."><figcaption>Unadjusted estimates and marginal 95% asymptotic confidence intervals, computed with R sreg 2.1.0.</figcaption></figure>
 
 ## 04 · Covariate adjusted inference {#adjusted}
 

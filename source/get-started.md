@@ -11,7 +11,7 @@ description: Installation, ATE estimation, covariate adjustment, and asymptotic 
 
 <div class="guide-language"><span>Implementation</span><div class="language-tabs" role="group" aria-label="Guide language"><button type="button" data-select-lang="r" aria-pressed="true">R</button><button type="button" data-select-lang="stata" aria-pressed="false">Stata</button><button type="button" data-select-lang="python" aria-pressed="false">Python</button></div></div>
 
-<div class="callout"><strong>Detailed R documentation</strong><br>For all estimator arguments, worked design specifications, returned results, plot customization, and simulation options, see the <a href="../r-guide/">R guide and reference</a>. The <a href="../empirical-example/?lang=r">empirical application</a> follows a complete analysis of experimental data.</div>
+<div class="callout"><strong>Detailed R documentation</strong><br>For all estimator arguments, worked design specifications, returned results, plot customization, and simulation options, see the <a href="r-guide.md">R guide and reference</a>. The <a href="empirical-example.md?lang=r">empirical application</a> follows a complete analysis of experimental data.</div>
 
 <div class="callout"><strong>Simulation specification</strong><br>1,000 individuals · 4 large strata · 1 active treatment versus control · 2 baseline covariates. The simulated treatment effect is 0.5 outcome units.</div>
 
